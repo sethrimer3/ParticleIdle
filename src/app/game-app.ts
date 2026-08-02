@@ -36,13 +36,17 @@ import {
   type ParticleDragState,
 } from '../input/particle-drag';
 import { createTabBar, type TabBar } from '../ui/tabs';
-import { createUpgradePanel, createResourcePanel, createSettingsPanel, createLoomPanel, createEquationPanel } from '../ui/panels';
+import { createUpgradePanel, createResourcePanel, createSettingsPanel, createLoomPanel, createEquationPanel, createDefensePanel, createAttackPanel } from '../ui/panels';
 import type { UpgradePanel } from '../ui/panels/upgrade-panel';
 import type { ResourcePanel } from '../ui/panels/resource-panel';
 import type { SettingsPanel } from '../ui/panels/settings-panel';
 import type { LoomPanel } from '../ui/panels/loom-panel';
 import type { EquationPanel } from '../ui/panels/equation-panel';
+import type { DefensePanel } from '../ui/panels/defense-panel';
 import { createLoadingScreen } from '../ui/loading';
+import { createGameCanvas as createDefenseCanvas, resizeCanvas as resizeDefenseCanvas, clearCanvas as clearDefenseCanvas, drawBackground as drawDefenseBackground } from '../render/canvas';
+import { createDefenseState, tickDefense, tryPlaceAttractor, type DefenseState } from '../sim/combat';
+import { drawDefenseScene } from '../render/combat';
 import { loadSettings, saveGame, loadGame, deleteSave } from '../settings';
 import { AUTO_SAVE_INTERVAL_MS } from '../data/balance';
 import { TIERS } from '../data/tiers';
@@ -64,6 +68,7 @@ interface AppState {
   forge: ForgeCrunchState;
   generatorState: GeneratorState;
   particleDrag: ParticleDragState;
+  defense: DefenseState;
 }
 
 // ─── Bootstrap ──────────────────────────────────────────────────
@@ -90,12 +95,13 @@ export async function startApp(): Promise<void> {
 
   const appState: AppState = {
     game,
-    activeTab: 'equation',
+    activeTab: 'defense',
     tapFlashAlpha: 0,
     animPulse: 0,
     forge,
     generatorState,
     particleDrag: createParticleDragState(),
+    defense: createDefenseState(),
   };
 
   // ── Background animation ──
@@ -116,6 +122,12 @@ export async function startApp(): Promise<void> {
 
   const cc = createGameCanvas(canvasContainer);
 
+  // ── Defense canvas (separate from the economy canvas; hidden except on Defense tab) ──
+  const defenseCanvasContainer = document.createElement('div');
+  defenseCanvasContainer.id = 'defense-canvas-container';
+  root.appendChild(defenseCanvasContainer);
+  const defenseCc = createDefenseCanvas(defenseCanvasContainer, 'defense-canvas');
+
   // ── Panels overlay container ──
   const panelsContainer = document.createElement('div');
   panelsContainer.id = 'panels-container';
@@ -132,17 +144,25 @@ export async function startApp(): Promise<void> {
   const settingsPanel = createSettingsPanel(settings, dispatch);
   const loomPanel = createLoomPanel(dispatch);
   const equationPanel = createEquationPanel();
+  const defensePanel = createDefensePanel((kind) => {
+    appState.defense.selectedAttractor = kind;
+  });
+  const attackPanel = createAttackPanel();
 
   panelsInner.appendChild(equationPanel.element);
   panelsInner.appendChild(loomPanel.element);
   panelsInner.appendChild(upgradePanel.element);
   panelsInner.appendChild(resourcePanel.element);
   panelsInner.appendChild(settingsPanel.element);
+  panelsInner.appendChild(attackPanel.element);
+
+  // Defense HUD/toolbar overlays the gameplay canvas directly (not the slide-in panel drawer).
+  root.appendChild(defensePanel.element);
 
   const tabBar = createTabBar(dispatch);
   root.appendChild(tabBar.element);
 
-  setActiveTab(appState, tabBar, upgradePanel, resourcePanel, settingsPanel, loomPanel, equationPanel, panelsContainer);
+  setActiveTab(appState, tabBar, upgradePanel, resourcePanel, settingsPanel, loomPanel, equationPanel, defensePanel, panelsContainer);
 
   // ── Particle system ──
   const particles = new ParticleSystem();
@@ -181,9 +201,41 @@ export async function startApp(): Promise<void> {
     handleParticleDragUp(appState.particleDrag, pos.x, pos.y, e.timeStamp, particles.particles);
   });
 
+  // ── Defense canvas placement input ──
+  const getDefenseCanvasCoords = (e: PointerEvent): { x: number; y: number } => {
+    const rect = defenseCc.canvas.getBoundingClientRect();
+    const scaleX = defenseCc.widthPx / rect.width;
+    const scaleY = defenseCc.heightPx / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  let defensePreviewX: number | null = null;
+  let defensePreviewY: number | null = null;
+
+  defenseCc.canvas.addEventListener('pointermove', (e: PointerEvent) => {
+    const pos = getDefenseCanvasCoords(e);
+    defensePreviewX = pos.x;
+    defensePreviewY = pos.y;
+  });
+  defenseCc.canvas.addEventListener('pointerleave', () => {
+    defensePreviewX = null;
+    defensePreviewY = null;
+  });
+  defenseCc.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+    if (!appState.defense.selectedAttractor) return;
+    const pos = getDefenseCanvasCoords(e);
+    // Keep placements off the bottom HUD/toolbar strip.
+    if (pos.y < 6 || pos.y > defenseCc.heightPx - 6) return;
+    tryPlaceAttractor(appState.defense, appState.defense.selectedAttractor, pos.x, pos.y, performance.now());
+  });
+
   // ── Resize handler ──
   const onResize = (): void => {
     resizeCanvas(cc, canvasContainer);
+    resizeDefenseCanvas(defenseCc, defenseCanvasContainer);
     const w = canvasContainer.clientWidth;
     const h = canvasContainer.clientHeight;
     bgAnimation.resize(w, h);
@@ -235,16 +287,16 @@ export async function startApp(): Promise<void> {
         break;
       case 'set_active_tab':
         state.activeTab = action.tabId;
-        setActiveTab(state, tabBar, upgradePanel, resourcePanel, settingsPanel, loomPanel, equationPanel, panelsContainer);
+        setActiveTab(state, tabBar, upgradePanel, resourcePanel, settingsPanel, loomPanel, equationPanel, defensePanel, panelsContainer);
         break;
       case 'save_game':
         saveGame(state.game);
         break;
       case 'reset_game':
         deleteSave();
-        Object.assign(state, { game: createGameState(), tapFlashAlpha: 0, activeTab: 'equation' });
+        Object.assign(state, { game: createGameState(), tapFlashAlpha: 0, activeTab: 'defense', defense: createDefenseState() });
         recomputeGenerators();
-        setActiveTab(state, tabBar, upgradePanel, resourcePanel, settingsPanel, loomPanel, equationPanel, panelsContainer);
+        setActiveTab(state, tabBar, upgradePanel, resourcePanel, settingsPanel, loomPanel, equationPanel, defensePanel, panelsContainer);
         break;
     }
   }
@@ -353,6 +405,15 @@ export async function startApp(): Promise<void> {
 
     particles.draw(cc);
 
+    // ── Defense tab: only tick/render while active ──
+    if (appState.activeTab === 'defense') {
+      tickDefense(appState.defense, deltaMs, nowMs, defenseCc.widthPx, defenseCc.heightPx);
+      clearDefenseCanvas(defenseCc);
+      drawDefenseBackground(defenseCc, '#0a0e14');
+      drawDefenseScene(defenseCc, appState.defense, defensePreviewX, defensePreviewY);
+      defensePanel.update(appState.defense);
+    }
+
     if (Math.floor(nowMs / 100) !== Math.floor((nowMs - deltaMs) / 100)) {
       updateUI();
     }
@@ -382,13 +443,18 @@ export async function startApp(): Promise<void> {
     setPanel: SettingsPanel,
     lPanel: LoomPanel,
     eqPanel: EquationPanel,
+    defPanel: DefensePanel,
     panelsCont: HTMLElement,
   ): void {
     bar.setActiveTab(state.activeTab);
 
-    // Equation tab is pure canvas render; other tabs show overlay panels.
-    const shouldShowPanels = state.activeTab !== 'equation';
+    // Equation/Defense tabs render straight to a full-screen canvas; the rest use overlay panels.
+    const shouldShowPanels = state.activeTab !== 'equation' && state.activeTab !== 'defense';
     panelsCont.classList.toggle('panels-visible', shouldShowPanels);
+
+    // Only one of the two gameplay canvases is visible at a time.
+    canvasContainer.style.display = state.activeTab === 'defense' ? 'none' : '';
+    defenseCanvasContainer.style.display = state.activeTab === 'defense' ? '' : 'none';
 
     // Show/hide individual panels
     eqPanel.element.style.display = state.activeTab === 'equation' ? '' : 'none';
@@ -396,6 +462,8 @@ export async function startApp(): Promise<void> {
     upPanel.element.style.display = state.activeTab === 'resources' ? '' : 'none';
     resPanel.element.style.display = state.activeTab === 'resources' ? '' : 'none';
     setPanel.element.style.display = state.activeTab === 'settings' ? '' : 'none';
+    defPanel.element.style.display = state.activeTab === 'defense' ? '' : 'none';
+    attackPanel.element.style.display = state.activeTab === 'attack' ? '' : 'none';
 
     // Immediately update visible panel
     if (state.activeTab === 'looms') {
@@ -403,6 +471,8 @@ export async function startApp(): Promise<void> {
     } else if (state.activeTab === 'resources') {
       upPanel.update(appState.game);
       resPanel.update(appState.game);
+    } else if (state.activeTab === 'defense') {
+      defPanel.update(appState.defense);
     }
   }
 

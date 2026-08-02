@@ -20,9 +20,9 @@ const INTERNAL_WIDTH = 320;
  * Create and mount the game canvas inside the given container.
  * Returns the rendering context sized to the internal resolution.
  */
-export function createGameCanvas(container: HTMLElement): CanvasContext {
+export function createGameCanvas(container: HTMLElement, id = 'game-canvas'): CanvasContext {
   const canvas = document.createElement('canvas');
-  canvas.id = 'game-canvas';
+  canvas.id = id;
   container.appendChild(canvas);
 
   const ctx = canvas.getContext('2d')!;

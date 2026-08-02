@@ -8,3 +8,7 @@ export { createLoomPanel } from './loom-panel';
 export type { LoomPanel } from './loom-panel';
 export { createEquationPanel } from './equation-panel';
 export type { EquationPanel } from './equation-panel';
+export { createDefensePanel } from './defense-panel';
+export type { DefensePanel } from './defense-panel';
+export { createAttackPanel } from './attack-panel';
+export type { AttackPanel } from './attack-panel';

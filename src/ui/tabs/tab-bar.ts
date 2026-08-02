@@ -13,9 +13,12 @@ interface TabDef {
   id: TabId;
   label: string;
   icon: string;
+  locked?: boolean;
 }
 
 const TABS: TabDef[] = [
+  { id: 'defense',   label: 'Defense',   icon: '🛡' },
+  { id: 'attack',    label: 'Attack',    icon: '⚔', locked: true },
   { id: 'equation',  label: 'Equation',  icon: 'ƒ' },
   { id: 'resources', label: 'Upgrades',  icon: '⬆' },
   { id: 'looms',     label: 'Looms',     icon: '⚙' },
@@ -31,10 +34,12 @@ export function createTabBar(dispatch: ActionHandler): TabBar {
   for (const tab of TABS) {
     const btn = document.createElement('button');
     btn.className = 'tab-btn';
+    if (tab.locked) btn.classList.add('tab-locked');
     btn.dataset['tabId'] = tab.id;
     btn.innerHTML = `<span class="tab-icon">${tab.icon}</span><span class="tab-label">${tab.label}</span>`;
     btn.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
+      if (tab.locked) return;
       dispatch({ kind: 'set_active_tab', tabId: tab.id });
     });
     bar.appendChild(btn);

@@ -9,7 +9,7 @@ export type GameAction =
   | { kind: 'save_game' }
   | { kind: 'reset_game' };
 
-export type TabId = 'equation' | 'looms' | 'resources' | 'settings';
+export type TabId = 'defense' | 'attack' | 'equation' | 'looms' | 'resources' | 'settings';
 
 export type ActionHandler = (action: GameAction) => void;
 
