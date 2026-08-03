@@ -18,7 +18,7 @@ import {
   FORCE_SIGMA_CELLS, FORCE_TWO_SIGMA_SQ, MAX_INJECT_VEL,
   SPARSE_RESPAWN_COLS, SPARSE_RESPAWN_ROWS,
   RESIZE_THRESHOLD_FR,
-  _clamp, _makeParticle,
+  _clamp, _makeParticle, _bilerp,
   type FluidParticle,
 } from './rpg-fluid-constants';
 import { stepFluidState } from './rpg-fluid-step';
@@ -69,6 +69,17 @@ export interface RpgFluid {
   /** Advance the simulation by deltaMs milliseconds. */
   step(deltaMs: number): void;
   /**
+   * Adds "charge" to cells within `radiusPx` of a world-space position.
+   * Charge is a gameplay-facing scalar layered on top of velocity/dye —
+   * used by the Defense tab to gate continuous fluid damage.
+   */
+  energize(xPx: number, yPx: number, radiusPx: number, amount: number): void;
+  /**
+   * Samples velocity (canvas px/s) and charge at a world-space position via
+   * bilinear interpolation.
+   */
+  sampleAt(xPx: number, yPx: number): { vx: number; vy: number; charge: number };
+  /**
    * Render the fluid as a background layer.
    * Must be called after the canvas has been cleared and before entities are drawn.
    */
@@ -90,6 +101,7 @@ export function createRpgFluid(): RpgFluid {
 
   const vxGrid = new Float32Array(FLUID_SIZE);
   const vyGrid = new Float32Array(FLUID_SIZE);
+  const chargeGrid = new Float32Array(FLUID_SIZE);
   const dyeR = new Float32Array(FLUID_SIZE);
   const dyeG = new Float32Array(FLUID_SIZE);
   const dyeB = new Float32Array(FLUID_SIZE);
@@ -197,6 +209,7 @@ export function createRpgFluid(): RpgFluid {
       occupancy,
       sparseCellW,
       sparseCellH,
+      chargeGrid,
     );
   }
 
@@ -207,11 +220,43 @@ export function createRpgFluid(): RpgFluid {
   function reset(): void {
     vxGrid.fill(0);
     vyGrid.fill(0);
+    chargeGrid.fill(0);
     dyeR.fill(0);
     dyeG.fill(0);
     dyeB.fill(0);
     particles = [];
     for (let i = 0; i < currentParticleCount; i++) particles.push(_makeParticle());
+  }
+
+  function energize(xPx: number, yPx: number, radiusPx: number, amount: number): void {
+    const gx = toGX(xPx);
+    const gy = toGY(yPx);
+    const radiusCellsX = Math.max(1, radiusPx / cellW);
+    const radiusCellsY = Math.max(1, radiusPx / cellH);
+    const col0 = Math.max(0, Math.floor(gx - radiusCellsX));
+    const col1 = Math.min(FLUID_COLS - 1, Math.ceil(gx + radiusCellsX));
+    const row0 = Math.max(0, Math.floor(gy - radiusCellsY));
+    const row1 = Math.min(FLUID_ROWS - 1, Math.ceil(gy + radiusCellsY));
+    for (let row = row0; row <= row1; row++) {
+      for (let col = col0; col <= col1; col++) {
+        const dx = (col - gx) / radiusCellsX;
+        const dy = (row - gy) / radiusCellsY;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > 1) continue;
+        const idx = row * FLUID_COLS + col;
+        chargeGrid[idx] += amount * (1 - d2);
+      }
+    }
+  }
+
+  function sampleAt(xPx: number, yPx: number): { vx: number; vy: number; charge: number } {
+    const gx = toGX(xPx);
+    const gy = toGY(yPx);
+    const gvx = _bilerp(vxGrid, gx, gy);
+    const gvy = _bilerp(vyGrid, gx, gy);
+    const charge = _bilerp(chargeGrid, gx, gy);
+    // Convert grid cells/s back to canvas px/s.
+    return { vx: gvx * cellW, vy: gvy * cellH, charge };
   }
 
   function setLowGraphicsMode(enabled: boolean): void {
@@ -235,5 +280,5 @@ export function createRpgFluid(): RpgFluid {
     }
   }
 
-  return { resize, addForce, addExplosion, step, render, reset, setLowGraphicsMode };
+  return { resize, addForce, addExplosion, step, energize, sampleAt, render, reset, setLowGraphicsMode };
 }

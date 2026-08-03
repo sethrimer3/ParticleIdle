@@ -1,6 +1,7 @@
 import type { Attractor, AttractorKind, GameplayParticle } from './types';
 import type { GameplayParticlePool } from './particle-logic';
 import { applyForceToParticle, spawnPooledParticle } from './particle-logic';
+import type { RpgFluid } from '../../render/rpg/rpg-fluid';
 import {
   REPULSOR_CONFIG,
   VORTEX_CONFIG,
@@ -12,6 +13,8 @@ import {
   VORTEX_RELEASE_SPEED,
   VORTEX_COOLDOWN_MS,
   MAX_ATTRACTORS,
+  CHARGE_ENERGIZE_RADIUS,
+  CHARGE_ENERGIZE_AMOUNT,
 } from '../../data/combat/combat-config';
 
 export interface AttractorField {
@@ -50,6 +53,7 @@ export function applyAttractorForces(
   field: AttractorField,
   pool: GameplayParticlePool,
   nowMs: number,
+  fluid?: RpgFluid,
 ): void {
   for (const attractor of field.attractors) {
     switch (attractor.kind) {
@@ -60,7 +64,36 @@ export function applyAttractorForces(
         applyVortexForce(attractor, pool, nowMs);
         break;
     }
+    if (fluid) energizeFluidAtAttractor(attractor, fluid);
   }
+}
+
+/**
+ * Feeds the background RPG fluid sim with a force impulse + charge at each
+ * active attractor's position, so charged/fast-moving fluid deals continuous
+ * damage to enemies (see tickDefense in defense-state.ts).
+ */
+function energizeFluidAtAttractor(attractor: Attractor, fluid: RpgFluid): void {
+  if (attractor.kind === 'repulsor') {
+    // Radial outward push, matching REPULSOR_FORCE's push-away behavior on particles.
+    fluid.addExplosion(attractor.x, attractor.y, 0.5, 255, 154, 107);
+  } else {
+    // Swirling inward pull while charging (vortex), matching VORTEX_PULL_FORCE's
+    // inward particle behavior; the rotating tangent makes the fluid visibly spin.
+    const strength = attractor.isCharging ? 1.4 : 0.7;
+    const angle = (attractor.chargeStartMs + attractor.chargeCount * 137) * 0.01;
+    fluid.addForce({
+      x: attractor.x,
+      y: attractor.y,
+      vx: Math.cos(angle) * VORTEX_PULL_FORCE * 0.5,
+      vy: Math.sin(angle) * VORTEX_PULL_FORCE * 0.5,
+      r: 214,
+      g: 184,
+      b: 255,
+      strength,
+    });
+  }
+  fluid.energize(attractor.x, attractor.y, CHARGE_ENERGIZE_RADIUS, CHARGE_ENERGIZE_AMOUNT);
 }
 
 function applyRepulsorForce(attractor: Attractor, particles: GameplayParticle[]): void {

@@ -9,6 +9,7 @@ export { resolveParticleEnemyCollisions } from './collision-logic';
 export {
   createDefenseState,
   getTargetPosition,
+  getActiveZoneId,
   tryPlaceAttractor,
   tickDefense,
   resetDefenseState,

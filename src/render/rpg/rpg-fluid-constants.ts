@@ -81,6 +81,12 @@ export const VEL_RETAIN_PER_SEC  = 0.18;
  */
 export const DYE_RETAIN_PER_SEC  = 0.28;
 /**
+ * Fraction of the "charge" field that remains after 1 second with no new
+ * energize() calls. Charge is a gameplay-facing scalar (Defense tab damage
+ * gating) layered on top of the existing velocity/dye grids.
+ */
+export const CHARGE_RETAIN_PER_SEC = 0.5;
+/**
  * Maximum speed in the grid (cells / s).  Forces exceeding this are clamped
  * to prevent runaway accumulation when many sources overlap.
  */

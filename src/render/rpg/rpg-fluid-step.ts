@@ -1,6 +1,6 @@
 import {
   FLUID_COLS, FLUID_ROWS, FLUID_SIZE,
-  VEL_RETAIN_PER_SEC, DYE_RETAIN_PER_SEC, MAX_GRID_VEL,
+  VEL_RETAIN_PER_SEC, DYE_RETAIN_PER_SEC, CHARGE_RETAIN_PER_SEC, MAX_GRID_VEL,
   MIN_DYE_MAG_FOR_BLEND,
   PARTICLE_WAKE_SPEED, PARTICLE_FULL_ACT_SPEED,
   PARTICLE_ACTIVATION_POWER, PARTICLE_REWAKE_BOOST,
@@ -62,17 +62,22 @@ export function stepFluidState(
   occupancy: Int16Array,
   sparseCellW: number,
   sparseCellH: number,
+  chargeGrid?: Float32Array,
 ): void {
   const dt = Math.min(deltaMs / 1000.0, 0.1);
 
   const velFactor = Math.pow(VEL_RETAIN_PER_SEC, dt);
   const dyeFactor = Math.pow(DYE_RETAIN_PER_SEC, dt);
+  const chargeFactor = Math.pow(CHARGE_RETAIN_PER_SEC, dt);
   for (let i = 0; i < FLUID_SIZE; i++) {
     vxGrid[i] *= velFactor;
     vyGrid[i] *= velFactor;
     dyeR[i] *= dyeFactor;
     dyeG[i] *= dyeFactor;
     dyeB[i] *= dyeFactor;
+  }
+  if (chargeGrid) {
+    for (let i = 0; i < FLUID_SIZE; i++) chargeGrid[i] *= chargeFactor;
   }
 
   for (let i = 0; i < FLUID_SIZE; i++) {

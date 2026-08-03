@@ -1,24 +1,31 @@
 import type { GameplayParticlePool } from './particle-logic';
-import { createParticlePool, spawnAmbientParticle, updateGameplayParticles } from './particle-logic';
+import { createParticlePool } from './particle-logic';
 import type { EnemyWave } from './enemy-logic';
 import { createEnemyWave, spawnEnemy, updateEnemies } from './enemy-logic';
 import type { AttractorField } from './attractor-logic';
 import { createAttractorField, placeAttractor, applyAttractorForces } from './attractor-logic';
-import { resolveParticleEnemyCollisions } from './collision-logic';
 import type { AttractorKind } from './types';
 import { loadDiscoveredEnemyIds, saveDiscoveredEnemyIds } from './enemy-codex-progress';
 import { getZone, getLoopCount, ZONE_LOOP_STAT_SCALE, type WaveDef } from '../../data/combat/zone-definitions';
+import type { RpgZoneId } from '../../data/rpg/rpg-zone-definitions';
+import { createRpgFluid, type RpgFluid } from '../../render/rpg/rpg-fluid';
 import {
-  AMBIENT_PARTICLE_SPAWN_INTERVAL_MS,
   TARGET_OFFSET_FROM_BOTTOM,
   TARGET_RADIUS,
   STARTING_LIVES,
+  FLUID_BASE_DAMAGE,
+  FLUID_SPEED_THRESHOLD,
+  FLUID_VELOCITY_DAMAGE_SCALE,
+  CHARGE_DAMAGE_THRESHOLD,
 } from '../../data/combat/combat-config';
 
 export interface DefenseState {
+  /** Retained for backward-compat/tooling only — no longer ticked or used for damage. */
   particlePool: GameplayParticlePool;
   enemyWave: EnemyWave;
   attractorField: AttractorField;
+  /** Background RPG fluid sim, reused for Defense's visuals AND continuous damage. */
+  fluid: RpgFluid;
   score: number;
   lives: number;
   escapedCount: number;
@@ -26,6 +33,9 @@ export interface DefenseState {
   lastEnemySpawnMs: number;
   lastParticleSpawnMs: number;
   isGameOver: boolean;
+  /** Last field dimensions the fluid sim was resized to (tracked so resize() is only called on change). */
+  lastFieldWidth: number;
+  lastFieldHeight: number;
 
   // ── Zone / wave progression ──
   zoneIndex: number;
@@ -72,6 +82,7 @@ export function createDefenseState(): DefenseState {
     particlePool: createParticlePool(),
     enemyWave: createEnemyWave(),
     attractorField: createAttractorField(),
+    fluid: createRpgFluid(),
     score: 0,
     lives: STARTING_LIVES,
     escapedCount: 0,
@@ -79,6 +90,8 @@ export function createDefenseState(): DefenseState {
     lastEnemySpawnMs: 0,
     lastParticleSpawnMs: 0,
     isGameOver: false,
+    lastFieldWidth: 0,
+    lastFieldHeight: 0,
     zoneIndex: 0,
     waveIndex: 0,
     waveSpawnQueue: [],
@@ -94,6 +107,11 @@ export function createDefenseState(): DefenseState {
 
 export function getTargetPosition(fieldWidth: number, fieldHeight: number): { x: number; y: number } {
   return { x: fieldWidth / 2, y: fieldHeight - TARGET_OFFSET_FROM_BOTTOM };
+}
+
+/** The RPG zone id whose background/terrain visuals the current Defense zone should match. */
+export function getActiveZoneId(state: DefenseState): RpgZoneId {
+  return getZone(state.zoneIndex).id;
 }
 
 export function tryPlaceAttractor(state: DefenseState, kind: AttractorKind, x: number, y: number, nowMs: number): boolean {
@@ -125,14 +143,34 @@ function currentStatScale(state: DefenseState): number {
   return Math.pow(ZONE_LOOP_STAT_SCALE, loops);
 }
 
+/**
+ * Continuous, pierce-through damage from the background fluid sim: any enemy
+ * standing in sufficiently charged fluid takes damage scaled by local fluid
+ * speed. No cooldown, no consumption — this replaces the old discrete
+ * particle-collision damage pass entirely.
+ */
+function applyFluidDamage(state: DefenseState, deltaMs: number): void {
+  const dtSec = deltaMs / 1000;
+  for (const e of state.enemyWave.enemies) {
+    if (!e.isActive) continue;
+    const { vx, vy, charge } = state.fluid.sampleAt(e.x, e.y);
+    if (charge <= CHARGE_DAMAGE_THRESHOLD) continue;
+    const speed = Math.hypot(vx, vy);
+    const dps = FLUID_BASE_DAMAGE + Math.max(0, speed - FLUID_SPEED_THRESHOLD) * FLUID_VELOCITY_DAMAGE_SCALE;
+    e.health -= dps * dtSec;
+  }
+}
+
 /** Advances the whole Defense simulation by one frame. Pure function over `state`. */
 export function tickDefense(state: DefenseState, deltaMs: number, nowMs: number, fieldWidth: number, fieldHeight: number): void {
   if (state.isGameOver) return;
 
-  if (nowMs - state.lastParticleSpawnMs >= AMBIENT_PARTICLE_SPAWN_INTERVAL_MS) {
-    state.lastParticleSpawnMs = nowMs;
-    spawnAmbientParticle(state.particlePool, fieldWidth);
+  if (fieldWidth !== state.lastFieldWidth || fieldHeight !== state.lastFieldHeight) {
+    state.lastFieldWidth = fieldWidth;
+    state.lastFieldHeight = fieldHeight;
+    state.fluid.resize(fieldWidth, fieldHeight);
   }
+  state.fluid.step(deltaMs);
 
   const zone = getZone(state.zoneIndex);
   const wave = zone.waves[state.waveIndex];
@@ -144,9 +182,8 @@ export function tickDefense(state: DefenseState, deltaMs: number, nowMs: number,
     markDiscovered(state, defId);
   }
 
-  applyAttractorForces(state.attractorField, state.particlePool, nowMs);
-  resolveParticleEnemyCollisions(state.particlePool, state.enemyWave);
-  updateGameplayParticles(state.particlePool, deltaMs, fieldWidth, fieldHeight);
+  applyAttractorForces(state.attractorField, state.particlePool, nowMs, state.fluid);
+  applyFluidDamage(state, deltaMs);
 
   const target = getTargetPosition(fieldWidth, fieldHeight);
   const result = updateEnemies(state.enemyWave, deltaMs, target.x, target.y, TARGET_RADIUS);

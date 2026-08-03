@@ -524,7 +524,7 @@ export function createGameLoop(
       tickDefense(ctx.appState.defense, deltaMs, nowMs, defenseCc.widthPx, defenseCc.heightPx);
       clearCanvas(defenseCc);
       drawBackground(defenseCc, '#0a0e14');
-      drawDefenseScene(defenseCc, ctx.appState.defense, ctx.appState.defensePreviewX, ctx.appState.defensePreviewY);
+      drawDefenseScene(defenseCc, ctx.appState.defense, ctx.appState.defensePreviewX, ctx.appState.defensePreviewY, nowMs);
       ctx.uiPanels.defensePanel.update(ctx.appState.defense);
     }
 

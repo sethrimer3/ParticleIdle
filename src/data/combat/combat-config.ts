@@ -47,6 +47,23 @@ export const PARTICLE_VELOCITY_DAMAGE_SCALE = 0.15;
 /** A particle that lands a hit is consumed (removed) rather than dealing unbounded repeat damage. */
 export const PARTICLE_CONSUMED_ON_HIT = true;
 
+// ─── Fluid damage (background RPG fluid sim drives Defense damage) ──
+
+/** Baseline damage-per-second dealt to any enemy standing in sufficiently charged fluid. */
+export const FLUID_BASE_DAMAGE = 3;
+/** Fluid speed (canvas px/s) above which extra velocity-scaled damage kicks in. */
+export const FLUID_SPEED_THRESHOLD = 18;
+/** Extra DPS per px/s of fluid speed above FLUID_SPEED_THRESHOLD. */
+export const FLUID_VELOCITY_DAMAGE_SCALE = 0.12;
+/** Minimum charge value at a sample point before any fluid damage is dealt. */
+export const CHARGE_DAMAGE_THRESHOLD = 0.05;
+/** Fraction of charge that decays per second when not being re-energized (informational; actual decay lives in rpg-fluid-constants CHARGE_RETAIN_PER_SEC). */
+export const CHARGE_DECAY_RATE = 0.5;
+/** Radius (px) around an active attractor within which fluid is energized each tick. */
+export const CHARGE_ENERGIZE_RADIUS = 40;
+/** Charge added per tick within CHARGE_ENERGIZE_RADIUS of an active attractor. */
+export const CHARGE_ENERGIZE_AMOUNT = 0.6;
+
 // ─── Attractors (shared) ─────────────────────────────────────────────
 
 export const MAX_ATTRACTORS = 12;
