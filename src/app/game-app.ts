@@ -22,7 +22,8 @@ import { createBackgroundAnimation, createVermiculateEffect, createSubstrateEffe
 import { type GameAction } from '../input';
 import { createParticleDragState } from '../input/particle-drag';
 import { createTabBar } from '../ui/tabs';
-import { createUpgradePanel, createResourcePanel, createSettingsPanel, createLoomPanel, createEquationPanel, createAchievementsPanel } from '../ui/panels';
+import { createUpgradePanel, createResourcePanel, createSettingsPanel, createLoomPanel, createEquationPanel, createAchievementsPanel, createDefensePanel, createAttackPanel } from '../ui/panels';
+import { createDefenseState, tryPlaceAttractor } from '../sim/combat';
 import { createHudOverlay } from '../ui/hud/hud-overlay';
 import { createLoadingScreen, selectStartupTip } from '../ui/loading';
 import { applyFontSizeOffset, loadSettings, saveGame, loadGame, deleteSave, readLastActiveTimestamp, writeLastActiveTimestamp, saveSettings } from '../settings';
@@ -150,6 +151,9 @@ async function startOwnedApp(root: HTMLElement, runtimeOwner: AppRuntimeOwner): 
     lastTapTimeMs: 0,
     forgeSacrificeFlashMs: 0,
     lastRefinedCrystalsGained: new Map(),
+    defense: createDefenseState(),
+    defensePreviewX: null,
+    defensePreviewY: null,
   };
 
   // ── Background effects ──
@@ -188,6 +192,14 @@ async function startOwnedApp(root: HTMLElement, runtimeOwner: AppRuntimeOwner): 
   const idleOverlay = createIdleOverlay();
   root.appendChild(idleOverlay.element);
   runtimeOwner.addCleanup(() => idleOverlay.dispose());
+
+  // ── Defense canvas (separate from the economy canvas; hidden except on Defense tab) ──
+  const defenseCanvasContainer = document.createElement('div');
+  defenseCanvasContainer.id = 'defense-canvas-container';
+  defenseCanvasContainer.style.display = 'none';
+  root.appendChild(defenseCanvasContainer);
+  const defenseCc = createGameCanvas(defenseCanvasContainer, 'defense-canvas');
+  resizeCanvas(defenseCc, defenseCanvasContainer);
 
   // ── Panels overlay container ──
   const panelsContainer = document.createElement('div');
@@ -309,6 +321,15 @@ async function startOwnedApp(root: HTMLElement, runtimeOwner: AppRuntimeOwner): 
   panelsInner.appendChild(loomPanel.element);
   panelsInner.appendChild(achievementsPanel.element);
   panelsInner.appendChild(settingsPanel.element);
+
+  // ── Defense / Attack panels ──
+  const defensePanel = createDefensePanel((kind) => {
+    appState.defense.selectedAttractor = kind;
+  });
+  const attackPanel = createAttackPanel();
+  // Defense HUD/toolbar overlays the gameplay canvas directly (not the slide-in panel drawer).
+  root.appendChild(defensePanel.element);
+  panelsInner.appendChild(attackPanel.element);
 
   // ── RPG container + render ──
   const rpgContainer = document.createElement('div');
@@ -536,6 +557,10 @@ async function startOwnedApp(root: HTMLElement, runtimeOwner: AppRuntimeOwner): 
     rpgRender,
     rpgContainer,
     rpgMenuPanel,
+    defenseCc,
+    defenseCanvasContainer,
+    defensePanel,
+    attackPanel,
   };
 
   setActiveTab(appState, uiPanels, appState.game, settings.isDevMode, settings.numberFormat);
@@ -546,11 +571,50 @@ async function startOwnedApp(root: HTMLElement, runtimeOwner: AppRuntimeOwner): 
   const cleanupCanvasPointerInput = wireCanvasPointerInput(cc, appState, particles, audioSystem, dispatch);
   runtimeOwner.addCleanup(cleanupCanvasPointerInput);
 
+  // ── Defense canvas placement input ──
+  const getDefenseCanvasCoords = (e: PointerEvent): { x: number; y: number } => {
+    const rect = defenseCc.canvas.getBoundingClientRect();
+    const scaleX = defenseCc.widthPx / rect.width;
+    const scaleY = defenseCc.heightPx / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const onDefensePointerMove = (e: PointerEvent): void => {
+    const pos = getDefenseCanvasCoords(e);
+    appState.defensePreviewX = pos.x;
+    appState.defensePreviewY = pos.y;
+  };
+  const onDefensePointerLeave = (): void => {
+    appState.defensePreviewX = null;
+    appState.defensePreviewY = null;
+  };
+  const onDefensePointerDown = (e: PointerEvent): void => {
+    if (!appState.defense.selectedAttractor) return;
+    const pos = getDefenseCanvasCoords(e);
+    // Keep placements off the bottom HUD/toolbar strip.
+    if (pos.y < 6 || pos.y > defenseCc.heightPx - 6) return;
+    tryPlaceAttractor(appState.defense, appState.defense.selectedAttractor, pos.x, pos.y, performance.now());
+  };
+  defenseCc.canvas.addEventListener('pointermove', onDefensePointerMove);
+  defenseCc.canvas.addEventListener('pointerleave', onDefensePointerLeave);
+  defenseCc.canvas.addEventListener('pointerdown', onDefensePointerDown);
+  runtimeOwner.addCleanup(() => {
+    defenseCc.canvas.removeEventListener('pointermove', onDefensePointerMove);
+    defenseCc.canvas.removeEventListener('pointerleave', onDefensePointerLeave);
+    defenseCc.canvas.removeEventListener('pointerdown', onDefensePointerDown);
+  });
+
   // ── Resize handler ──
   const onResize = (): void => {
     if (appState.activeTab !== 'rpg') {
       resizeCanvas(cc, canvasContainer);
       recomputeGenerators();
+    }
+    if (appState.activeTab === 'defense') {
+      resizeCanvas(defenseCc, defenseCanvasContainer);
     }
     const w = canvasContainer.clientWidth;
     const h = canvasContainer.clientHeight;
