@@ -3,20 +3,20 @@ import type { EnemyWave } from './enemy-logic';
 import { getEnemyDef } from '../../data/combat/enemy-codex';
 import {
   PARTICLE_IMPACT_SPEED_THRESHOLD,
-  PARTICLE_HIT_COOLDOWN_MS,
-  PARTICLE_BASE_DAMAGE,
-  PARTICLE_VELOCITY_DAMAGE_SCALE,
-  PARTICLE_CONSUMED_ON_HIT,
+  PIERCE_HIT_COOLDOWN_MS,
+  BASE_PARTICLE_DAMAGE,
+  DAMAGE_PER_SPEED_UNIT,
 } from '../../data/combat/combat-config';
 
 /**
- * Energized, fast-moving particles damage any enemy they physically touch.
- * A per-particle hit cooldown and impact-speed threshold prevent a particle
- * resting against an enemy from dealing damage every frame.
+ * Energized, fast-moving particles pierce through any enemy they physically touch, dealing
+ * damage and continuing on their path rather than being consumed. A per-particle, per-enemy
+ * hit cooldown (and an impact-speed threshold) prevents a particle resting/orbiting against
+ * an enemy from dealing damage every frame.
  */
-export function resolveParticleEnemyCollisions(pool: GameplayParticlePool, wave: EnemyWave): void {
+export function resolveParticleEnemyCollisions(pool: GameplayParticlePool, wave: EnemyWave, nowMs: number): void {
   for (const p of pool.particles) {
-    if (!p.isEnergized || p.hitCooldownMs > 0) continue;
+    if (!p.isEnergized) continue;
 
     const speed = Math.hypot(p.vx, p.vy);
     if (speed < PARTICLE_IMPACT_SPEED_THRESHOLD) continue;
@@ -28,16 +28,13 @@ export function resolveParticleEnemyCollisions(pool: GameplayParticlePool, wave:
       const radius = getEnemyDef(e.defId).radius;
       if (dist > radius) continue;
 
-      const overSpeed = Math.max(0, speed - PARTICLE_IMPACT_SPEED_THRESHOLD);
-      const damage = PARTICLE_BASE_DAMAGE + overSpeed * PARTICLE_VELOCITY_DAMAGE_SCALE;
+      const lastHit = p.hitCooldowns.get(e.id) ?? 0;
+      if (nowMs - lastHit < PIERCE_HIT_COOLDOWN_MS) continue;
+
+      const damage = BASE_PARTICLE_DAMAGE + DAMAGE_PER_SPEED_UNIT * speed;
       e.health -= damage;
       p.damage = damage;
-      p.hitCooldownMs = PARTICLE_HIT_COOLDOWN_MS;
-
-      if (PARTICLE_CONSUMED_ON_HIT) {
-        p.isActive = false;
-      }
-      break;
+      p.hitCooldowns.set(e.id, nowMs);
     }
   }
 }

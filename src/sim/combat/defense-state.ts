@@ -8,6 +8,7 @@ import { resolveParticleEnemyCollisions } from './collision-logic';
 import type { AttractorKind } from './types';
 import { loadDiscoveredEnemyIds, saveDiscoveredEnemyIds } from './enemy-codex-progress';
 import { getZone, getLoopCount, ZONE_LOOP_STAT_SCALE, type WaveDef } from '../../data/combat/zone-definitions';
+import { getTowerDef } from '../../data/combat/tower-defs';
 import {
   AMBIENT_PARTICLE_SPAWN_INTERVAL_MS,
   TARGET_OFFSET_FROM_BOTTOM,
@@ -23,6 +24,8 @@ export interface DefenseState {
   lives: number;
   escapedCount: number;
   selectedAttractor: AttractorKind | null;
+  /** id of a placed attractor selected for the tower upgrade panel (null = none selected). */
+  selectedAttractorId: number | null;
   lastEnemySpawnMs: number;
   lastParticleSpawnMs: number;
   isGameOver: boolean;
@@ -76,6 +79,7 @@ export function createDefenseState(): DefenseState {
     lives: STARTING_LIVES,
     escapedCount: 0,
     selectedAttractor: null,
+    selectedAttractorId: null,
     lastEnemySpawnMs: 0,
     lastParticleSpawnMs: 0,
     isGameOver: false,
@@ -99,6 +103,23 @@ export function getTargetPosition(fieldWidth: number, fieldHeight: number): { x:
 export function tryPlaceAttractor(state: DefenseState, kind: AttractorKind, x: number, y: number, nowMs: number): boolean {
   const attractor = placeAttractor(state.attractorField, kind, x, y, nowMs);
   return attractor !== null;
+}
+
+/** Attempts to purchase the next upgrade for a placed attractor, deducting `score`. */
+export function tryUpgradeAttractor(state: DefenseState, attractorId: number): boolean {
+  const attractor = state.attractorField.attractors.find((a) => a.id === attractorId);
+  if (!attractor) return false;
+  const towerDef = getTowerDef(attractor.towerId);
+  if (!towerDef) return false;
+  const upgrade = towerDef.upgrades[attractor.upgradeIndex];
+  if (!upgrade) return false;
+  if (state.score < upgrade.cost) return false;
+
+  state.score -= upgrade.cost;
+  upgrade.applyUpgrade(attractor);
+  attractor.upgradeIndex += 1;
+  attractor.level = attractor.upgradeIndex + 1;
+  return true;
 }
 
 function markDiscovered(state: DefenseState, defId: string): void {
@@ -144,8 +165,8 @@ export function tickDefense(state: DefenseState, deltaMs: number, nowMs: number,
     markDiscovered(state, defId);
   }
 
-  applyAttractorForces(state.attractorField, state.particlePool, nowMs);
-  resolveParticleEnemyCollisions(state.particlePool, state.enemyWave);
+  applyAttractorForces(state.attractorField, state.particlePool, nowMs, deltaMs);
+  resolveParticleEnemyCollisions(state.particlePool, state.enemyWave, nowMs);
   updateGameplayParticles(state.particlePool, deltaMs, fieldWidth, fieldHeight);
 
   const target = getTargetPosition(fieldWidth, fieldHeight);

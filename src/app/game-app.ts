@@ -45,7 +45,7 @@ import type { EquationPanel } from '../ui/panels/equation-panel';
 import type { DefensePanel } from '../ui/panels/defense-panel';
 import { createLoadingScreen } from '../ui/loading';
 import { createGameCanvas as createDefenseCanvas, resizeCanvas as resizeDefenseCanvas, clearCanvas as clearDefenseCanvas, drawBackground as drawDefenseBackground } from '../render/canvas';
-import { createDefenseState, tickDefense, tryPlaceAttractor, type DefenseState } from '../sim/combat';
+import { createDefenseState, tickDefense, tryPlaceAttractor, tryUpgradeAttractor, findAttractorAt, type DefenseState } from '../sim/combat';
 import { drawDefenseScene } from '../render/combat';
 import { loadSettings, saveGame, loadGame, deleteSave } from '../settings';
 import { AUTO_SAVE_INTERVAL_MS } from '../data/balance';
@@ -144,9 +144,14 @@ export async function startApp(): Promise<void> {
   const settingsPanel = createSettingsPanel(settings, dispatch);
   const loomPanel = createLoomPanel(dispatch);
   const equationPanel = createEquationPanel();
-  const defensePanel = createDefensePanel((kind) => {
-    appState.defense.selectedAttractor = kind;
-  });
+  const defensePanel = createDefensePanel(
+    (kind) => {
+      appState.defense.selectedAttractor = kind;
+    },
+    (attractorId) => {
+      tryUpgradeAttractor(appState.defense, attractorId);
+    },
+  );
   const attackPanel = createAttackPanel();
 
   panelsInner.appendChild(equationPanel.element);
@@ -225,8 +230,18 @@ export async function startApp(): Promise<void> {
     defensePreviewY = null;
   });
   defenseCc.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-    if (!appState.defense.selectedAttractor) return;
     const pos = getDefenseCanvasCoords(e);
+    // Clicking directly on a placed attractor always selects it for the upgrade panel,
+    // regardless of whether a placement tool is active.
+    const hit = findAttractorAt(appState.defense.attractorField, pos.x, pos.y);
+    if (hit) {
+      appState.defense.selectedAttractorId = hit.id;
+      return;
+    }
+    if (!appState.defense.selectedAttractor) {
+      appState.defense.selectedAttractorId = null;
+      return;
+    }
     // Keep placements off the bottom HUD/toolbar strip.
     if (pos.y < 6 || pos.y > defenseCc.heightPx - 6) return;
     tryPlaceAttractor(appState.defense, appState.defense.selectedAttractor, pos.x, pos.y, performance.now());

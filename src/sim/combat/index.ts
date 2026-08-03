@@ -3,13 +3,14 @@ export { createParticlePool, spawnAmbientParticle, updateGameplayParticles, spaw
 export type { GameplayParticlePool } from './particle-logic';
 export { createEnemyWave, spawnEnemy, updateEnemies } from './enemy-logic';
 export type { EnemyWave, EnemyTickResult } from './enemy-logic';
-export { createAttractorField, placeAttractor, applyAttractorForces } from './attractor-logic';
+export { createAttractorField, placeAttractor, applyAttractorForces, findAttractorAt } from './attractor-logic';
 export type { AttractorField } from './attractor-logic';
 export { resolveParticleEnemyCollisions } from './collision-logic';
 export {
   createDefenseState,
   getTargetPosition,
   tryPlaceAttractor,
+  tryUpgradeAttractor,
   tickDefense,
   resetDefenseState,
 } from './defense-state';

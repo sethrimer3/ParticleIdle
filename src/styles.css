@@ -800,6 +800,49 @@ html, body {
   font-weight: 600;
 }
 
+/* ── Tower upgrade panel ─────────────────────────────────────── */
+.tower-upgrade-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  background: rgba(18, 18, 30, 0.9);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--border-radius);
+  pointer-events: auto;
+}
+
+.tower-upgrade-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tower-upgrade-next {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tower-upgrade-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 6px 12px;
+  background: rgba(201, 168, 76, 0.18);
+  color: var(--text-primary);
+  border: 1px solid var(--accent);
+  border-radius: var(--border-radius);
+  font-family: var(--font-primary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tower-upgrade-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Attack tab (locked/coming soon) ─────────────────────────── */
 .attack-coming-soon {
   text-align: center;
