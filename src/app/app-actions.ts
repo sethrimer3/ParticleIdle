@@ -607,6 +607,9 @@ export function handleAction(
         resizeCanvas(cc, uiPanels.mainCanvasContainer);
         recomputeGenerators();
       }
+      if (action.tabId === 'defense') {
+        resizeCanvas(uiPanels.defenseCc, uiPanels.defenseCanvasContainer);
+      }
       break;
     case 'save_game':
       // Handled directly in game-app.ts before this function is reached.
@@ -630,11 +633,14 @@ export function setActiveTab(
 
   const isRpg = state.activeTab === 'rpg';
   const isEquation = state.activeTab === 'equation';
+  const isDefense = state.activeTab === 'defense';
+  const isAttack = state.activeTab === 'attack';
 
   // RPG tab hides the main canvas and shows its own canvas container.
+  // Defense tab likewise hides the main canvas and shows its own canvas.
   // Equation tab shows the main canvas only (no panel overlay).
   // All other tabs show the panel overlay on top of the main canvas.
-  panels.mainCanvasContainer.style.display = isRpg ? 'none' : '';
+  panels.mainCanvasContainer.style.display = (isRpg || isDefense) ? 'none' : '';
   panels.rpgContainer.style.display = isRpg ? '' : 'none';
   panels.rpgRender.statsPanel.style.display = isRpg ? '' : 'none';
   panels.rpgRender.setActive(isRpg);
@@ -645,8 +651,13 @@ export function setActiveTab(
     panels.rpgRender.resize(panels.rpgContainer);
   }
 
-  // Slide the panel overlay in for non-equation, non-RPG tabs.
-  const shouldShowPanels = !isEquation && !isRpg;
+  // Defense canvas (separate from the economy canvas) is only shown on its own tab.
+  panels.defenseCanvasContainer.style.display = isDefense ? '' : 'none';
+  // Defense HUD/toolbar overlays the gameplay canvas directly (not the slide-in panel drawer).
+  panels.defensePanel.element.style.display = isDefense ? '' : 'none';
+
+  // Slide the panel overlay in for non-equation, non-RPG, non-Defense tabs.
+  const shouldShowPanels = !isEquation && !isRpg && !isDefense;
   panels.panelsContainer.classList.toggle('panels-visible', shouldShowPanels);
 
   // Show/hide individual panels
@@ -654,6 +665,7 @@ export function setActiveTab(
   panels.achievementsPanel.element.style.display = state.activeTab === 'achievements' ? '' : 'none';
   panels.achievementsPanel.setVisible(state.activeTab === 'achievements');
   panels.settingsPanel.element.style.display = state.activeTab === 'settings' ? '' : 'none';
+  panels.attackPanel.element.style.display = isAttack ? '' : 'none';
 
   // Immediately update visible panel
   updateVisiblePanels(state, panels, game, isDevMode, numberFormat);
@@ -686,5 +698,9 @@ export function updateVisiblePanels(
     // RPG menu is only re-rendered when visible; calling update here
     // pre-populates its state so it shows current data immediately when opened.
     panels.rpgMenuPanel.update(game.rpg, game.resources, numberFormat, isDevMode);
+  } else if (state.activeTab === 'defense') {
+    // Defense HUD is also refreshed every frame in the game loop while active;
+    // this call just ensures it's current the instant the tab is switched to.
+    panels.defensePanel.update(state.defense);
   }
 }

@@ -15,6 +15,8 @@ import {
 } from '../sim';
 import { tickForgeWarmup } from '../sim/forge/forge-state';
 import { getLoomInputTierId } from '../sim/looms';
+import { tickDefense } from '../sim/combat';
+import { drawDefenseScene } from '../render/combat';
 import {
   clearCanvas,
   drawBackground,
@@ -514,6 +516,16 @@ export function createGameLoop(
       const _oW = ctx.cc.overlayCanvas.width / ctx.cc.overlayDpr;
       const _oH = ctx.cc.overlayCanvas.height / ctx.cc.overlayDpr;
       drawPerfStats(ctx.cc.overlayCtx, _oW, _oH, ctx.cc.overlayDpr);
+    }
+
+    // ── Defense tab: only tick/render the minigame while it's active ──────
+    if (ctx.appState.activeTab === 'defense') {
+      const defenseCc = ctx.uiPanels.defenseCc;
+      tickDefense(ctx.appState.defense, deltaMs, nowMs, defenseCc.widthPx, defenseCc.heightPx);
+      clearCanvas(defenseCc);
+      drawBackground(defenseCc, '#0a0e14');
+      drawDefenseScene(defenseCc, ctx.appState.defense, ctx.appState.defensePreviewX, ctx.appState.defensePreviewY);
+      ctx.uiPanels.defensePanel.update(ctx.appState.defense);
     }
 
     if (Math.floor(nowMs / 100) !== Math.floor((nowMs - deltaMs) / 100)) {

@@ -16,6 +16,10 @@ import type { EquationPanel } from '../ui/panels/equation-panel';
 import type { AchievementsPanel } from '../ui/panels/achievements-panel';
 import type { RpgRender } from '../render/rpg/rpg-render';
 import type { RpgMenuPanel } from '../ui/panels/rpg-menu-panel';
+import type { DefensePanel } from '../ui/panels/defense-panel';
+import type { AttackPanel } from '../ui/panels/attack-panel';
+import type { DefenseState } from '../sim/combat';
+import type { CanvasContext } from '../render/canvas';
 
 /** Mutable application-level state. */
 export interface AppState {
@@ -40,6 +44,11 @@ export interface AppState {
    * Displayed as an overlay alongside the sacrifice flash. Cleared on the next crunch.
    */
   lastRefinedCrystalsGained: Map<string, number>;
+  /** Defense (tower-defense-style) minigame state, active on the 'defense' tab. */
+  defense: DefenseState;
+  /** Attractor placement cursor preview, in defense-canvas coordinates. Null when off-canvas. */
+  defensePreviewX: number | null;
+  defensePreviewY: number | null;
 }
 
 /** Configuration object grouping all UI panels for tab switching. */
@@ -60,4 +69,12 @@ export interface UIPanels {
   rpgContainer: HTMLElement;
   /** Tabbed RPG menu (Menu / Weapons / Upgrades). */
   rpgMenuPanel: RpgMenuPanel;
+  /** Dedicated Defense minigame canvas, separate from the economy canvas. */
+  defenseCc: CanvasContext;
+  /** Container that wraps the defense canvas — shown only on the Defense tab. */
+  defenseCanvasContainer: HTMLElement;
+  /** Attractor-selection strip + HUD + enemy codex for the Defense tab. */
+  defensePanel: DefensePanel;
+  /** Placeholder panel for the Attack tab. */
+  attackPanel: AttackPanel;
 }
