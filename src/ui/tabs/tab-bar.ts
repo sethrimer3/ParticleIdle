@@ -66,7 +66,7 @@ const UPGRADES_FRAMES: readonly string[] = Array.from(
   (_, i) => `${ICON_BASE}/upgradesTab/upgradesTabAnimation/upgradesTabAnimation_frame_ (${i + 1}).png`,
 );
 
-const TAB_SPRITES: Record<TabId, TabSprites> = {
+const TAB_SPRITES: Partial<Record<TabId, TabSprites>> = {
   equation: {
     kind: 'static',
     normal:   `${ICON_BASE}/equationTab/equationTab_icon.png`,
@@ -102,14 +102,20 @@ const TAB_SPRITES: Record<TabId, TabSprites> = {
 interface TabDef {
   id: TabId;
   label: string;
+  /** Fallback text/emoji icon, used for tabs that don't have a TAB_SPRITES entry. */
+  icon?: string;
+  locked?: boolean;
 }
 
 const TABS: TabDef[] = [
-  { id: 'equation',     label: 'Equation'     },
-  { id: 'resources',    label: 'Upgrades'     },
-  { id: 'rpg',          label: 'RPG'          },
-  { id: 'achievements', label: 'Achievements' },
-  { id: 'settings',     label: 'Settings'     },
+  { id: 'defense',      label: 'Defense',      icon: '🛡' },
+  { id: 'attack',       label: 'Attack',       icon: '⚔', locked: true },
+  { id: 'equation',     label: 'Equation'      },
+  { id: 'resources',    label: 'Upgrades'      },
+  { id: 'looms',        label: 'Looms',        icon: '⚙' },
+  { id: 'rpg',          label: 'RPG'           },
+  { id: 'achievements', label: 'Achievements'  },
+  { id: 'settings',     label: 'Settings'      },
 ];
 
 // ─── Upgrades animation state ────────────────────────────────────
@@ -192,10 +198,19 @@ function upgradesAnimStart(anim: UpgradesAnimState): void {
  * Returns the container and (if animated) the animation state.
  */
 function buildTabIconEl(
-  sprites: TabSprites,
+  sprites: TabSprites | undefined,
+  fallbackIcon?: string,
 ): { container: HTMLElement; animState?: UpgradesAnimState; preloadTimeoutId?: number } {
   const container = document.createElement('div');
   container.className = 'tab-icon-sprite';
+
+  if (!sprites) {
+    const iconEl = document.createElement('span');
+    iconEl.className = 'tab-icon-text';
+    iconEl.textContent = fallbackIcon ?? '';
+    container.appendChild(iconEl);
+    return { container };
+  }
 
   if (sprites.kind === 'static') {
     const imgNormal = document.createElement('img');
@@ -254,9 +269,10 @@ export function createTabBar(dispatch: ActionHandler): TabBar {
     const sprites = TAB_SPRITES[tab.id];
     const btn = document.createElement('button');
     btn.className = 'tab-btn';
+    if (tab.locked) btn.classList.add('tab-locked');
     btn.dataset['tabId'] = tab.id;
 
-    const { container, animState, preloadTimeoutId } = buildTabIconEl(sprites);
+    const { container, animState, preloadTimeoutId } = buildTabIconEl(sprites, tab.icon);
     btn.appendChild(container);
 
     const labelEl = document.createElement('span');
@@ -266,6 +282,7 @@ export function createTabBar(dispatch: ActionHandler): TabBar {
 
     btn.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
+      if (tab.locked) return;
       dispatch({ kind: 'set_active_tab', tabId: tab.id });
     });
 

@@ -117,6 +117,7 @@ export interface CanvasContext {
  * `idleCanvasRenderStyle` defaults to 'pixelated'; update it and call
  * `resizeCanvas` again to switch modes.
  */
+<<<<<<< HEAD
 export function createGameCanvas(container: HTMLElement): CanvasContext {
   const gameArea = document.createElement('div');
   gameArea.id = 'game-area';
@@ -132,6 +133,12 @@ export function createGameCanvas(container: HTMLElement): CanvasContext {
   // which would fire pointercancel and break mote dragging on mobile.
   canvas.style.touchAction = 'none';
   gameArea.appendChild(canvas);
+=======
+export function createGameCanvas(container: HTMLElement, id = 'game-canvas'): CanvasContext {
+  const canvas = document.createElement('canvas');
+  canvas.id = id;
+  container.appendChild(canvas);
+>>>>>>> codex/fix-render-screen-issues-and-pop-up-loop
 
   const ctx = canvas.getContext('2d')!;
 

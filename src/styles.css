@@ -7,6 +7,7 @@
    in the correct cascade order.
    ═══════════════════════════════════════════════════════════════ */
 
+<<<<<<< HEAD
 @import './styles/base.css';
 @import './styles/canvas.css';
 @import './styles/panels.css';
@@ -14,3 +15,825 @@
 @import './styles/components.css';
 @import './styles/idle-overlay.css';
 @import './styles/responsive.css';
+=======
+:root {
+  --bg-primary: #0a0a12;
+  --bg-secondary: #1a1a2e;
+  --bg-panel: #12121e;
+  --bg-overlay: rgba(8, 8, 16, 0.88);
+  --text-primary: #e6e6ea;
+  --text-secondary: #8a8a9a;
+  --accent: #c9a84c;
+  --accent-glow: rgba(201, 168, 76, 0.3);
+  --accent-border: rgba(201, 168, 76, 0.2);
+  --font-primary: 'Cormorant Garamond', Georgia, serif;
+  --border-radius: 16px;
+  --tab-height: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a12;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* ── App layout ──────────────────────────────────────────────── */
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* ── Background animation canvas ─────────────────────────────── */
+.bg-animation-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* ── Vermiculate background canvas ───────────────────────────── */
+.vermiculate-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ── Canvas container (full screen behind everything) ────────── */
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-primary);
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Panels overlay container ────────────────────────────────── */
+#panels-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: calc(100% - var(--tab-height) - var(--safe-bottom));
+  z-index: 5;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+
+  /* Slide-in transition from the right */
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+#panels-container.panels-visible {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Panel overlay background — 80% opaque dark */
+#panels-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-overlay);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Custom scrollbar for panels */
+#panels-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+#panels-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#panels-container::-webkit-scrollbar-thumb {
+  background: var(--accent-glow);
+  border-radius: 3px;
+}
+
+/* Inner panel content padding */
+.panels-inner {
+  position: relative;
+  padding: 12px 12px;
+  padding-bottom: 16px;
+  min-height: 100%;
+}
+
+/* ── Panel base ──────────────────────────────────────────────── */
+.panel {
+  margin-bottom: 8px;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ── Upgrade buttons ─────────────────────────────────────────── */
+.upgrade-section {
+  margin-bottom: 6px;
+}
+
+.upgrade-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  min-height: 44px;
+}
+
+.upgrade-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.upgrade-btn:not(:disabled):active {
+  background: rgba(201, 168, 76, 0.12);
+}
+
+.unlock-btn {
+  background: rgba(26, 26, 46, 0.85);
+  border-style: dashed;
+  justify-content: center;
+}
+
+.upgrade-btn .gem-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  image-rendering: auto;
+}
+
+.upgrade-btn .upgrade-text {
+  flex: 1;
+}
+
+/* ── Resource rows ───────────────────────────────────────────── */
+.resource-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  min-height: 36px;
+}
+
+.resource-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  image-rendering: auto;
+}
+
+.resource-name {
+  font-weight: 700;
+  min-width: 60px;
+}
+
+.resource-value {
+  font-weight: 600;
+  flex: 1;
+  text-align: right;
+}
+
+.resource-lifetime {
+  color: var(--text-secondary);
+  font-size: 11px;
+  min-width: 70px;
+  text-align: right;
+}
+
+/* ── Settings panel ──────────────────────────────────────────── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.settings-row label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.settings-slider {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.settings-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.settings-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-primary);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.settings-btn.danger {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.settings-btn:active {
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.credits {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ── Tab bar (bottom, always visible) ────────────────────────── */
+.tab-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  height: calc(var(--tab-height) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(12, 12, 20, 0.95);
+  border-top: 1px solid rgba(201, 168, 76, 0.15);
+  z-index: 10;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--border-radius);
+  transition: color 0.15s, background 0.15s;
+  min-height: 44px;
+}
+
+.tab-btn .tab-icon {
+  font-size: 22px;
+  line-height: 1;
+  font-family: var(--font-primary);
+}
+
+.tab-btn .tab-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.tab-btn:active {
+  opacity: 0.7;
+}
+
+/* ── Loading screen ──────────────────────────────────────────── */
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: opacity 0.6s ease-out;
+}
+
+.loading-screen--fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-logo-container {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-logo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.loading-text {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: loading-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ── Landscape adjustments ───────────────────────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  #app {
+    max-width: 100%;
+  }
+}
+
+/* ── Desktop wider layout ────────────────────────────────────── */
+@media (min-width: 768px) {
+  #app {
+    max-width: 600px;
+    border-left: 1px solid rgba(255,255,255,0.05);
+    border-right: 1px solid rgba(255,255,255,0.05);
+  }
+}
+
+/* ── Panel subtitle ─────────────────────────────────────────── */
+.panel-subtitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+/* ── Loom cards ──────────────────────────────────────────────── */
+.loom-card {
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--border-radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.loom-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.loom-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  image-rendering: auto;
+}
+
+.loom-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.loom-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.loom-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.loom-stat {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.loom-upgrade-btn {
+  font-size: 12px;
+}
+
+/* ── Equation panel — locked forge presentation ──────────────── */
+.forge-locked {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.forge-locked-icon {
+  font-size: 48px;
+  color: var(--text-secondary);
+  opacity: 0.4;
+  margin-bottom: 12px;
+  animation: forge-pulse 3s ease-in-out infinite;
+}
+
+@keyframes forge-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.forge-locked-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.forge-locked-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.forge-locked-cost {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.forge-unlock-btn {
+  background: rgba(201, 168, 76, 0.1);
+  border-color: var(--accent) !important;
+  color: var(--accent);
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 16px;
+}
+
+.forge-unlock-btn:not(:disabled):active {
+  background: rgba(201, 168, 76, 0.25);
+}
+
+/* ── Equation panel — unlocked display ───────────────────────── */
+.equation-title {
+  text-align: center;
+}
+
+.equation-display {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--border-radius);
+  padding: 16px 12px;
+  margin-bottom: 16px;
+  text-align: center;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.eq-prefix {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-right: 4px;
+}
+
+.eq-dormant {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  font-size: 24px;
+  letter-spacing: 4px;
+}
+
+.eq-term {
+  font-weight: 700;
+  transition: text-shadow 0.2s;
+}
+
+.eq-term:hover {
+  text-shadow: 0 0 8px currentColor;
+}
+
+.eq-operator {
+  font-weight: 400;
+}
+
+.eq-upgrades-title {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.eq-upgrade-btn {
+  font-size: 12px;
+}
+
+.equation-display sup {
+  font-size: 0.7em;
+  vertical-align: super;
+}
+
+.equation-display sub {
+  font-size: 0.6em;
+  vertical-align: sub;
+}
+
+/* ── Defense canvas ──────────────────────────────────────────── */
+#defense-canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+  background: #0a0e14;
+}
+
+#defense-canvas-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Defense HUD/toolbar (overlays the canvas, not the slide-in drawer) ── */
+.defense-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100% - var(--tab-height) - var(--safe-bottom));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  margin: 0;
+}
+
+.defense-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.defense-hud-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.defense-hud-col-right {
+  align-items: flex-end;
+}
+
+.defense-hud-lives.defense-hud-danger {
+  color: #e05a5a;
+}
+
+.defense-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  pointer-events: auto;
+}
+
+/* ── Enemy codex overlay ─────────────────────────────────────── */
+.enemy-codex-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+}
+
+.enemy-codex-card {
+  width: min(320px, 88%);
+  max-height: 70%;
+  background: rgba(14, 14, 22, 0.96);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--border-radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.enemy-codex-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--accent-border);
+  color: var(--text-primary);
+}
+
+.enemy-codex-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.enemy-codex-list {
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.enemy-codex-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  opacity: 0.55;
+}
+
+.enemy-codex-row.enemy-codex-discovered {
+  opacity: 1;
+}
+
+.enemy-codex-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.enemy-codex-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.enemy-codex-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.enemy-codex-stats {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.defense-attractor-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: rgba(18, 18, 30, 0.85);
+  color: var(--text-primary);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--border-radius);
+  font-family: var(--font-primary);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.defense-attractor-btn.selected {
+  border-color: var(--accent);
+  background: rgba(201, 168, 76, 0.18);
+}
+
+.defense-attractor-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.defense-attractor-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Attack tab (locked/coming soon) ─────────────────────────── */
+.attack-coming-soon {
+  text-align: center;
+  padding: 48px 16px;
+}
+
+.attack-lock-icon {
+  font-size: 40px;
+  opacity: 0.5;
+  margin-bottom: 12px;
+}
+
+.attack-coming-soon p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ── Locked tab button ───────────────────────────────────────── */
+.tab-btn.tab-locked {
+  opacity: 0.35;
+  cursor: default;
+}
+>>>>>>> codex/fix-render-screen-issues-and-pop-up-loop

@@ -65,7 +65,7 @@ export type GameAction =
   | { kind: 'dev_grant_duplicate_lenses' }
   | { kind: 'dev_grant_duplicate_weaves' };
 
-export type TabId = 'equation' | 'resources' | 'rpg' | 'achievements' | 'settings';
+export type TabId = 'defense' | 'attack' | 'equation' | 'looms' | 'resources' | 'rpg' | 'achievements' | 'settings';
 
 export type ActionHandler = (action: GameAction) => void;
 

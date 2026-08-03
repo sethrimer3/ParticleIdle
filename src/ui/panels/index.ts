@@ -8,7 +8,14 @@ export { createLoomPanel } from './loom-panel';
 export type { LoomPanel } from './loom-panel';
 export { createEquationPanel } from './equation-panel';
 export type { EquationPanel } from './equation-panel';
+<<<<<<< HEAD
 export { createAchievementsPanel } from './achievements-panel';
 export type { AchievementsPanel } from './achievements-panel';
 export { createRpgMenuPanel } from './rpg-menu-panel';
 export type { RpgMenuPanel } from './rpg-menu-panel';
+=======
+export { createDefensePanel } from './defense-panel';
+export type { DefensePanel } from './defense-panel';
+export { createAttackPanel } from './attack-panel';
+export type { AttackPanel } from './attack-panel';
+>>>>>>> codex/fix-render-screen-issues-and-pop-up-loop
