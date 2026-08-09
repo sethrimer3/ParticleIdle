@@ -4,6 +4,13 @@ This is the short, high-signal entry point for AI coding agents. The longer lega
 
 ## Main-only Git and auto-sync policy
 
+> **The `scripts/pause-autosync.ps1` / `resume-autosync.ps1` mechanism below does not work
+> in a checkout named anything other than `Equatoria_Idle` — it throws
+> `Refusing to operate outside the Equatoria_Idle repository`. The `GitHub-SyncRepos`
+> scheduled task also ignores the marker files entirely. In those checkouts, pause
+> auto-commit by disabling the scheduled task instead — see the auto-commit section of
+> [`CLAUDE.md`](CLAUDE.md).**
+
 All AI coding work is performed directly on `main`. Before investigation that may lead to
 edits, verify this is Equatoria Idle on `main`, inspect `.git/AGENT_WORK_ACTIVE`, and run
 `powershell -ExecutionPolicy Bypass -File .\scripts\pause-autosync.ps1`. Stop if another
