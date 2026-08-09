@@ -1,14 +1,16 @@
 import type { GameplayParticlePool } from './particle-logic';
-import { createParticlePool } from './particle-logic';
+import { createParticlePool, spawnAmbientParticle, updateGameplayParticles } from './particle-logic';
 import type { EnemyWave } from './enemy-logic';
 import { createEnemyWave, spawnEnemy, updateEnemies } from './enemy-logic';
 import type { AttractorField } from './attractor-logic';
 import { createAttractorField, placeAttractor, applyAttractorForces } from './attractor-logic';
+import { resolveParticleEnemyCollisions } from './collision-logic';
 import type { AttractorKind } from './types';
 import { loadDiscoveredEnemyIds, saveDiscoveredEnemyIds } from './enemy-codex-progress';
 import { getZone, getLoopCount, ZONE_LOOP_STAT_SCALE, type WaveDef } from '../../data/combat/zone-definitions';
 import type { RpgZoneId } from '../../data/rpg/rpg-zone-definitions';
 import { createRpgFluid, type RpgFluid } from '../../render/rpg/rpg-fluid';
+import { getTowerDef } from '../../data/combat/tower-defs';
 import {
   TARGET_OFFSET_FROM_BOTTOM,
   TARGET_RADIUS,
@@ -17,10 +19,11 @@ import {
   FLUID_SPEED_THRESHOLD,
   FLUID_VELOCITY_DAMAGE_SCALE,
   CHARGE_DAMAGE_THRESHOLD,
+  AMBIENT_PARTICLE_SPAWN_INTERVAL_MS,
 } from '../../data/combat/combat-config';
 
 export interface DefenseState {
-  /** Retained for backward-compat/tooling only — no longer ticked or used for damage. */
+  /** Ambient particles: spawned, steered by attractors, and damaging on enemy contact. */
   particlePool: GameplayParticlePool;
   enemyWave: EnemyWave;
   attractorField: AttractorField;
@@ -30,6 +33,8 @@ export interface DefenseState {
   lives: number;
   escapedCount: number;
   selectedAttractor: AttractorKind | null;
+  /** id of a placed attractor selected for the tower upgrade panel (null = none selected). */
+  selectedAttractorId: number | null;
   lastEnemySpawnMs: number;
   lastParticleSpawnMs: number;
   isGameOver: boolean;
@@ -87,6 +92,7 @@ export function createDefenseState(): DefenseState {
     lives: STARTING_LIVES,
     escapedCount: 0,
     selectedAttractor: null,
+    selectedAttractorId: null,
     lastEnemySpawnMs: 0,
     lastParticleSpawnMs: 0,
     isGameOver: false,
@@ -117,6 +123,23 @@ export function getActiveZoneId(state: DefenseState): RpgZoneId {
 export function tryPlaceAttractor(state: DefenseState, kind: AttractorKind, x: number, y: number, nowMs: number): boolean {
   const attractor = placeAttractor(state.attractorField, kind, x, y, nowMs);
   return attractor !== null;
+}
+
+/** Attempts to purchase the next upgrade for a placed attractor, deducting `score`. */
+export function tryUpgradeAttractor(state: DefenseState, attractorId: number): boolean {
+  const attractor = state.attractorField.attractors.find((a) => a.id === attractorId);
+  if (!attractor) return false;
+  const towerDef = getTowerDef(attractor.towerId);
+  if (!towerDef) return false;
+  const upgrade = towerDef.upgrades[attractor.upgradeIndex];
+  if (!upgrade) return false;
+  if (state.score < upgrade.cost) return false;
+
+  state.score -= upgrade.cost;
+  upgrade.applyUpgrade(attractor);
+  attractor.upgradeIndex += 1;
+  attractor.level = attractor.upgradeIndex + 1;
+  return true;
 }
 
 function markDiscovered(state: DefenseState, defId: string): void {
@@ -172,6 +195,11 @@ export function tickDefense(state: DefenseState, deltaMs: number, nowMs: number,
   }
   state.fluid.step(deltaMs);
 
+  if (nowMs - state.lastParticleSpawnMs >= AMBIENT_PARTICLE_SPAWN_INTERVAL_MS) {
+    state.lastParticleSpawnMs = nowMs;
+    spawnAmbientParticle(state.particlePool, fieldWidth);
+  }
+
   const zone = getZone(state.zoneIndex);
   const wave = zone.waves[state.waveIndex];
 
@@ -182,8 +210,10 @@ export function tickDefense(state: DefenseState, deltaMs: number, nowMs: number,
     markDiscovered(state, defId);
   }
 
-  applyAttractorForces(state.attractorField, state.particlePool, nowMs, state.fluid);
+  applyAttractorForces(state.attractorField, state.particlePool, nowMs, deltaMs, state.fluid);
   applyFluidDamage(state, deltaMs);
+  resolveParticleEnemyCollisions(state.particlePool, state.enemyWave, nowMs);
+  updateGameplayParticles(state.particlePool, deltaMs, fieldWidth, fieldHeight);
 
   const target = getTargetPosition(fieldWidth, fieldHeight);
   const result = updateEnemies(state.enemyWave, deltaMs, target.x, target.y, TARGET_RADIUS);

@@ -21,7 +21,7 @@ function createBlankParticle(): GameplayParticle {
     effectIntensity: 0,
     trail: [],
     effectRemainingMs: 0,
-    hitCooldownMs: 0,
+    hitCooldowns: new Map(),
   };
 }
 
@@ -53,7 +53,7 @@ export function spawnPooledParticle(pool: GameplayParticlePool, x: number, y: nu
   p.effectIntensity = 0;
   p.trail.length = 0;
   p.effectRemainingMs = 0;
-  p.hitCooldownMs = 0;
+  p.hitCooldowns.clear();
   pool.particles.push(p);
   return p;
 }
@@ -136,8 +136,6 @@ export function updateGameplayParticles(
     } else if (p.trail.length > 0) {
       p.trail.pop();
     }
-
-    if (p.hitCooldownMs > 0) p.hitCooldownMs -= deltaMs;
 
     p.ax = 0;
     p.ay = 0;

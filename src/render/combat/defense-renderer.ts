@@ -1,7 +1,7 @@
 import type { CanvasContext } from '../canvas';
 import type { DefenseState } from '../../sim/combat';
 import { getTargetPosition, getActiveZoneId } from '../../sim/combat';
-import { TARGET_RADIUS, REPULSOR_CONFIG, VORTEX_CONFIG } from '../../data/combat/combat-config';
+import { TARGET_RADIUS, PARTICLE_DEFAULT_COLOR, getAttractorConfig } from '../../data/combat/combat-config';
 import { getEnemyDef } from '../../data/combat/enemy-codex';
 import type { RpgZoneId } from '../../data/rpg/rpg-zone-definitions';
 import { getRpgZoneTerrainProfile } from '../../data/rpg/rpg-zone-definitions';
@@ -74,11 +74,37 @@ function drawAttractors(cc: CanvasContext, state: DefenseState): void {
   const { ctx } = cc;
   for (const a of state.attractorField.attractors) {
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, a.config.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = a.config.color + '55';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+
+    if (a.kind === 'orbit') {
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.orbitRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = a.config.color + '66';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      if (a.dualRingEnabled) {
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.orbitRadius * 1.6, 0, Math.PI * 2);
+        ctx.strokeStyle = a.config.effectColor + '55';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    } else {
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = a.config.color + '55';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    if (a.id === state.selectedAttractorId) {
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.arc(a.x, a.y, 9, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     ctx.beginPath();
     ctx.arc(a.x, a.y, 4, 0, Math.PI * 2);
@@ -86,14 +112,54 @@ function drawAttractors(cc: CanvasContext, state: DefenseState): void {
     ctx.fill();
 
     if (a.kind === 'vortex_cannon' && a.isCharging) {
-      const chargeFrac = a.chargeCount / 6;
+      const chargeFrac = a.chargeCount / a.maxChargeCount;
       ctx.beginPath();
       ctx.arc(a.x, a.y, 4 + chargeFrac * 6, 0, Math.PI * 2);
       ctx.strokeStyle = a.config.effectColor;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`L${a.level}`, a.x, a.y - 10);
+
     ctx.restore();
+  }
+}
+
+function drawParticles(cc: CanvasContext, state: DefenseState): void {
+  const { ctx } = cc;
+  for (const p of state.particlePool.particles) {
+    if (!p.isActive) continue;
+
+    // Trail (rendered oldest-to-newest, fading out).
+    if (p.trail.length > 1) {
+      for (let i = p.trail.length - 1; i >= 0; i--) {
+        const pt = p.trail[i];
+        const trailAlpha = (1 - i / p.trail.length) * 0.35 * p.effectIntensity;
+        if (trailAlpha <= 0) continue;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 1, 0, Math.PI * 2);
+        ctx.fillStyle = p.effectColor;
+        ctx.globalAlpha = trailAlpha;
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    const isEffect = p.effectType !== 'none';
+    const color = isEffect ? p.effectColor : PARTICLE_DEFAULT_COLOR;
+    const opacity = isEffect ? 0.55 + p.effectIntensity * 0.45 : 0.6;
+    const radius = isEffect ? 1.6 : 1.2;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = opacity;
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -126,7 +192,7 @@ function drawEnemies(cc: CanvasContext, state: DefenseState): void {
 function drawPlacementPreview(cc: CanvasContext, state: DefenseState, previewX: number | null, previewY: number | null): void {
   if (previewX === null || previewY === null || !state.selectedAttractor) return;
   const { ctx } = cc;
-  const config = state.selectedAttractor === 'repulsor' ? REPULSOR_CONFIG : VORTEX_CONFIG;
+  const config = getAttractorConfig(state.selectedAttractor);
   const radius = config.radius;
   ctx.save();
   ctx.setLineDash([2, 2]);
@@ -152,6 +218,7 @@ export function drawDefenseScene(
   const target = getTargetPosition(cc.widthPx, cc.heightPx);
   drawTarget(cc, target.x, target.y, state.lives);
   drawAttractors(cc, state);
+  drawParticles(cc, state);
   drawEnemies(cc, state);
   drawPlacementPreview(cc, state, previewX, previewY);
 }

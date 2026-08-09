@@ -1,7 +1,7 @@
 import type { AttractorConfig } from '../../data/combat/combat-config';
 
-export type AttractorKind = 'repulsor' | 'vortex_cannon';
-export type ParticleEffectType = 'none' | 'repulsed' | 'vortex_charging' | 'vortex_released';
+export type AttractorKind = 'repulsor' | 'vortex_cannon' | 'orbit';
+export type ParticleEffectType = 'none' | 'repulsed' | 'vortex_charging' | 'vortex_released' | 'orbit';
 
 /** A gameplay-capable particle. Simulation state only — rendering reads it but never mutates it. */
 export interface GameplayParticle {
@@ -23,7 +23,9 @@ export interface GameplayParticle {
   /** Recent trail positions, newest first. */
   trail: { x: number; y: number }[];
   effectRemainingMs: number;
-  hitCooldownMs: number;
+  /** Particles pierce enemies rather than being consumed on hit; this tracks per-enemy hit
+   * timestamps so the same enemy can't be re-damaged by the same particle every frame. */
+  hitCooldowns: Map<number, number>;
 }
 
 /**
@@ -54,4 +56,31 @@ export interface Attractor {
   chargeStartMs: number;
   cooldownUntilMs: number;
   isCharging: boolean;
+
+  /** Tower upgrade progression (see data/combat/tower-defs.ts). */
+  towerId: string;
+  upgradeIndex: number;
+  level: number;
+
+  /** Generic influence radius (repulsor push range / vortex pull range). Upgradeable. */
+  radius: number;
+
+  // Repulsor
+  pushForce: number;
+  burstModeEnabled: boolean;
+  lastBurstMs: number;
+
+  // Vortex cannon
+  pullForce: number;
+  chargeDurationMs: number;
+  maxChargeCount: number;
+  releaseSpeed: number;
+  releaseSpread: number;
+  overchargeEnabled: boolean;
+
+  // Orbit ring
+  orbitRadius: number;
+  orbitSpeedMultiplier: number;
+  centripetalMultiplier: number;
+  dualRingEnabled: boolean;
 }

@@ -39,13 +39,13 @@ export const PARTICLE_EFFECT_DECAY_MS = 900;
 
 /** Minimum speed (px/s) an energized particle must have to deal damage on contact. */
 export const PARTICLE_IMPACT_SPEED_THRESHOLD = 18;
-/** Minimum time between hits from the same particle, so a resting particle can't melt an enemy in one frame. */
-export const PARTICLE_HIT_COOLDOWN_MS = 250;
-export const PARTICLE_BASE_DAMAGE = 4;
-/** Extra damage per px/s of impact speed above the threshold (extension point for velocity scaling). */
-export const PARTICLE_VELOCITY_DAMAGE_SCALE = 0.15;
-/** A particle that lands a hit is consumed (removed) rather than dealing unbounded repeat damage. */
-export const PARTICLE_CONSUMED_ON_HIT = true;
+/** Particles pierce enemies (never consumed on hit). Minimum time between two hits from the
+ * SAME particle on the SAME enemy, so a particle resting/orbiting against an enemy can't melt
+ * it in one frame — tracked per-particle, per-enemy (see GameplayParticle.hitCooldowns). */
+export const PIERCE_HIT_COOLDOWN_MS = 400;
+/** damage = BASE_PARTICLE_DAMAGE + DAMAGE_PER_SPEED_UNIT * particleSpeed. Rewards speed upgrades. */
+export const BASE_PARTICLE_DAMAGE = 2;
+export const DAMAGE_PER_SPEED_UNIT = 0.4;
 
 // ─── Fluid damage (background RPG fluid sim drives Defense damage) ──
 
@@ -69,7 +69,7 @@ export const CHARGE_ENERGIZE_AMOUNT = 0.6;
 export const MAX_ATTRACTORS = 12;
 
 export interface AttractorConfig {
-  readonly id: 'repulsor' | 'vortex_cannon';
+  readonly id: 'repulsor' | 'vortex_cannon' | 'orbit';
   readonly label: string;
   readonly icon: string;
   readonly cost: number;
@@ -109,5 +109,40 @@ export const VORTEX_MAX_CHARGE = 6;
 export const VORTEX_CHARGE_DURATION_MS = 1400;
 export const VORTEX_RELEASE_SPEED = 220;
 export const VORTEX_COOLDOWN_MS = 600;
+/** Base randomized angular spread (radians) applied to each released particle's angle. */
+export const VORTEX_RELEASE_SPREAD_BASE = 0.3;
 
-export const ATTRACTOR_CONFIGS: readonly AttractorConfig[] = [REPULSOR_CONFIG, VORTEX_CONFIG];
+// ─── Repulsor burst mode (upgrade) ────────────────────────────────────
+
+export const REPULSOR_BURST_INTERVAL_MS = 3000;
+export const REPULSOR_BURST_DURATION_MS = 400;
+export const REPULSOR_BURST_MULTIPLIER = 3;
+
+// ─── Orbit Ring ────────────────────────────────────────────────────────
+
+export const ORBIT_CONFIG: AttractorConfig = {
+  id: 'orbit',
+  label: 'Orbit Ring',
+  icon: '⟳',
+  cost: 0,
+  radius: 80,
+  color: '#6bffb0',
+  effectColor: '#a0ffd0',
+};
+export const ORBIT_DEFAULT_RADIUS = 50;
+/** How far outside/inside a ring's radius a particle can be pulled into orbit. */
+export const ORBIT_CAPTURE_BAND = 30;
+/** Strength (px/s^2 per px of radial error) of the centripetal correction force. */
+export const ORBIT_CENTRIPETAL_STRENGTH = 6;
+/** Per-tick blend factor toward the target tangential velocity (0..1). */
+export const ORBIT_TANGENT_BLEND = 0.12;
+/** Minimum tangential speed granted to a freshly-captured, near-stationary particle. */
+export const ORBIT_MIN_SPEED = 60;
+
+export const ATTRACTOR_CONFIGS: readonly AttractorConfig[] = [REPULSOR_CONFIG, VORTEX_CONFIG, ORBIT_CONFIG];
+
+export function getAttractorConfig(kind: AttractorConfig['id']): AttractorConfig {
+  const found = ATTRACTOR_CONFIGS.find((c) => c.id === kind);
+  if (!found) throw new Error(`Unknown attractor kind: ${kind}`);
+  return found;
+}

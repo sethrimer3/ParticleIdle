@@ -3,6 +3,7 @@ import type { AttractorKind } from '../../sim/combat';
 import { ATTRACTOR_CONFIGS } from '../../data/combat/combat-config';
 import { ENEMY_CODEX, ENEMY_CODEX_ORDER } from '../../data/combat/enemy-codex';
 import { getZone } from '../../data/combat/zone-definitions';
+import { getTowerDef } from '../../data/combat/tower-defs';
 
 export interface DefensePanel {
   element: HTMLElement;
@@ -10,11 +11,14 @@ export interface DefensePanel {
 }
 
 /**
- * Attractor-selection strip + HUD + enemy codex for the Defense tab. Placement itself
- * happens on the dedicated defense canvas (wired up in game-app.ts), so this panel only
- * owns the UI chrome — it never touches simulation state directly.
+ * Attractor-selection strip + HUD + enemy codex + tower upgrade panel for the Defense tab.
+ * Placement itself happens on the dedicated defense canvas (wired up in game-app.ts), so
+ * this panel only owns the UI chrome — it never touches simulation state directly.
  */
-export function createDefensePanel(onSelectAttractor: (kind: AttractorKind) => void): DefensePanel {
+export function createDefensePanel(
+  onSelectAttractor: (kind: AttractorKind) => void,
+  onUpgrade: (attractorId: number) => void,
+): DefensePanel {
   const panel = document.createElement('div');
   panel.className = 'panel defense-panel';
 
@@ -99,6 +103,30 @@ export function createDefensePanel(onSelectAttractor: (kind: AttractorKind) => v
   }
   panel.appendChild(codexOverlay);
 
+  // ── Tower upgrade panel (shown when a placed attractor is selected) ──
+  const upgradePanel = document.createElement('div');
+  upgradePanel.className = 'tower-upgrade-panel';
+  upgradePanel.style.display = 'none';
+
+  const upgradeTitle = document.createElement('div');
+  upgradeTitle.className = 'tower-upgrade-title';
+  const upgradeNext = document.createElement('div');
+  upgradeNext.className = 'tower-upgrade-next';
+  const upgradeBtn = document.createElement('button');
+  upgradeBtn.className = 'tower-upgrade-btn';
+  upgradeBtn.textContent = 'Upgrade';
+
+  let currentAttractorId: number | null = null;
+  upgradeBtn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    if (currentAttractorId !== null) onUpgrade(currentAttractorId);
+  });
+
+  upgradePanel.appendChild(upgradeTitle);
+  upgradePanel.appendChild(upgradeNext);
+  upgradePanel.appendChild(upgradeBtn);
+  panel.appendChild(upgradePanel);
+
   const toolbar = document.createElement('div');
   toolbar.className = 'defense-toolbar';
   panel.appendChild(toolbar);
@@ -139,6 +167,29 @@ export function createDefensePanel(onSelectAttractor: (kind: AttractorKind) => v
     killsEl.textContent = `Kills: ${state.totalKills}`;
     livesEl.textContent = `Lives: ${Math.max(0, state.lives)}`;
     livesEl.classList.toggle('defense-hud-danger', state.lives <= 1);
+
+    const selectedAttractor = state.selectedAttractorId != null
+      ? state.attractorField.attractors.find((a) => a.id === state.selectedAttractorId) ?? null
+      : null;
+    currentAttractorId = selectedAttractor?.id ?? null;
+
+    if (!selectedAttractor) {
+      upgradePanel.style.display = 'none';
+    } else {
+      upgradePanel.style.display = '';
+      const towerDef = getTowerDef(selectedAttractor.towerId);
+      const nextUpgrade = towerDef?.upgrades[selectedAttractor.upgradeIndex] ?? null;
+      upgradeTitle.textContent = `${towerDef?.name ?? selectedAttractor.towerId} — Lv ${selectedAttractor.level}`;
+      if (!nextUpgrade) {
+        upgradeNext.textContent = 'All upgrades purchased.';
+        upgradeBtn.textContent = 'MAX LEVEL';
+        upgradeBtn.disabled = true;
+      } else {
+        upgradeNext.textContent = `${nextUpgrade.label} — ${nextUpgrade.description}`;
+        upgradeBtn.textContent = `Upgrade (${nextUpgrade.cost})`;
+        upgradeBtn.disabled = state.score < nextUpgrade.cost;
+      }
+    }
 
     for (const [defId, refs] of codexRows) {
       const discovered = state.discoveredEnemyIds.has(defId);
