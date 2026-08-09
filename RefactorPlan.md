@@ -489,7 +489,7 @@ These instructions are model-neutral and apply equally to Codex and Claude.
 ### Before work
 
 - Read this document completely.
-- Read `agents.md`, `CLAUDE.md`, current architecture/status documents, and repository workflow instructions.
+- Read `AGENTS.md`, `CLAUDE.md`, current architecture/status documents, and repository workflow instructions.
 - Treat current source as authoritative.
 - Inspect commits after the baseline.
 - Preserve unrelated work.
@@ -1454,7 +1454,7 @@ These instructions apply to Codex, Claude, and any repository-capable implementa
 
 #### Before editing
 
-- Read `AGENTS.md`/`agents.md`, `CLAUDE.md`, the required repository maps and conventions, current
+- Read `AGENTS.md`, `CLAUDE.md`, the required repository maps and conventions, current
   status/TODO, architecture/decisions, relevant `file_index.md` entries, and this plan in full.
 - Confirm Phase Three is complete. Do not recreate its factory, ownership migration, reset profiles,
   matrix, or tests.
@@ -2002,7 +2002,7 @@ These instructions apply equally to Codex, Claude, and any repository-capable im
 
 #### Before editing
 
-- Read `AGENTS.md`, `agents.md`, `CLAUDE.md`, required repo maps/status/TODO/routing/conventions/
+- Read `AGENTS.md`, `CLAUDE.md`, required repo maps/status/TODO/routing/conventions/
   dependency docs, architecture/decisions, relevant `file_index.md` entries, and this plan in full.
 - Confirm Phases One through Four are complete. Do not repeat their lifecycle, collection-owner,
   reset-profile, Verdure, or overlay work.
@@ -2360,7 +2360,7 @@ These instructions apply equally to any repository-capable implementation agent.
 
 #### Before editing
 
-- Read `AGENTS.md`, `agents.md`, `CLAUDE.md`, every required repository workflow document, the
+- Read `AGENTS.md`, `CLAUDE.md`, every required repository workflow document, the
   relevant damage/targeting/attack file-index entries, and this complete phase.
 - Confirm Phases One through Five are closed and do not modify their completed ownership,
   lifecycle, reset-profile, readiness, Verdure, or overlay work.
@@ -2635,7 +2635,7 @@ collection tests that exist at implementation time, plus the Phase Five/Six test
 
 ### Implementation Sequence
 
-1. Read `AGENTS.md`/`agents.md`, `CLAUDE.md`, current repository maps/status/TODO,
+1. Read `AGENTS.md`, `CLAUDE.md`, current repository maps/status/TODO,
    `ARCHITECTURE.md`/`DECISIONS.md`, and this entire plan.
 2. Confirm branch, build, working tree, upstream divergence, and commits after `6dce8a9d`.
 3. Treat current source as authoritative; re-inventory the exact family/order/type-id counts in all
@@ -2745,7 +2745,7 @@ These instructions apply to Codex, Claude, and any repository-capable implementa
 
 #### Before editing
 
-- Read `AGENTS.md`/`agents.md`, `CLAUDE.md`, the required repository maps/conventions, current
+- Read `AGENTS.md`, `CLAUDE.md`, the required repository maps/conventions, current
   status/TODO, architecture/decisions, and this plan in full.
 - Confirm Phases One through Six are complete; do not recreate their factories, policies, or tests.
 - Re-verify current source family/order/type-id counts instead of trusting this plan's line numbers.
@@ -3231,7 +3231,7 @@ suites.
 
 ### Implementation Sequence
 
-1. Read `AGENTS.md`/`agents.md`, `CLAUDE.md`, current repository maps/status/TODO,
+1. Read `AGENTS.md`, `CLAUDE.md`, current repository maps/status/TODO,
    `ARCHITECTURE.md`/`DECISIONS.md`, and this entire plan (including Phase Seven, whose roster this
    phase reuses).
 2. Confirm branch, build, working tree, upstream divergence, and commits after `fbc8960d`.
@@ -3336,7 +3336,7 @@ These instructions apply to Codex, Claude, and any repository-capable implementa
 
 #### Before editing
 
-- Read `AGENTS.md`/`agents.md`, `CLAUDE.md`, the required repository maps/conventions, current
+- Read `AGENTS.md`, `CLAUDE.md`, the required repository maps/conventions, current
   status/TODO, architecture/decisions, and this plan in full, including Phase Seven.
 - Confirm Phases One through Seven are complete; do not recreate their factories, policies, rosters,
   or tests.

@@ -1,6 +1,8 @@
 # Equatoria Idle Agent Entry Point
 
-This is the short, high-signal entry point for AI coding agents. The longer legacy guideline file is `agents.md`; keep it as the detailed policy reference.
+This is the single entry point and standing policy reference for AI coding agents. It was
+previously duplicated as a second tracked file, `agents.md`, which Windows could not keep
+distinct from this one; the two silently drifted and have been reconciled here.
 
 ## Main-only Git and auto-sync policy
 
@@ -34,7 +36,7 @@ final commit mechanism. Never begin a second coding task concurrently. Read
 
 ## Required read order before editing
 
-1. `AGENTS.md` — this file.
+1. `AGENTS.md` — this file: full standing rules for architecture, TypeScript discipline, naming, performance, docs, and build workflow.
 2. `docs/REPO_MAP.md` — compact folder map with HIGH VALUE / CAUTION / IGNORE labels.
 3. `docs/AI_REPO_MAP.md` — extended orientation: per-subsystem risks and routing table.
 4. `docs/CURRENT_STATUS.md` — current build, recent work, known incomplete areas.
@@ -45,7 +47,6 @@ final commit mechanism. Never begin a second coding task concurrently. Read
 9. `docs/CONVENTIONS.md` — naming, folder, state, rendering, and testing conventions.
 10. `docs/DEPENDENCY_MAP.md` — module dependency hierarchy and shared-module risk table.
 11. `ARCHITECTURE.md` and `DECISIONS.md` — read when changing runtime flow, coordinate systems, save data, rendering architecture, or long-lived technical decisions.
-12. `agents.md` — full standing rules for architecture, TypeScript discipline, naming, performance, docs, and build workflow.
 
 ### Short-circuit by task type
 - **UI/panel change** → skip to step 6 (`AI_TASK_ROUTING.md`)

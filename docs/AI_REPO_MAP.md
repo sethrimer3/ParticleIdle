@@ -55,8 +55,7 @@ Declared in `package.json`:
 
 | File | Purpose | Read when |
 |---|---|---|
-| `AGENTS.md` | Short required entry point for agents | Always before editing |
-| `agents.md` | Long-standing agent rules and coding standards | When planning or validating implementation work |
+| `AGENTS.md` | Required entry point plus long-standing agent rules and coding standards | Always before editing |
 | `README.md` | Quick start, project summary, deployment notes | First orientation pass |
 | `ARCHITECTURE.md` | Detailed architecture and runtime flow | Durable architecture, coordinate, rendering, sim changes |
 | `DECISIONS.md` | Historical technical decisions | Save formats, coordinate systems, render strategy, big numbers |
