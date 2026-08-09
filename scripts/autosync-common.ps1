@@ -1,5 +1,10 @@
 Set-StrictMode -Version Latest
 
+# Names this project has shipped under. The repository was renamed from
+# Equatoria_Idle to ParticleIdle; both are accepted so a rename does not
+# silently disable the pause/resume mechanism again.
+$script:EquatoriaRepositoryNames = @('Equatoria_Idle', 'ParticleIdle')
+
 function Get-EquatoriaRepository {
     $repository = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     $gitDirectory = (& git -C $repository rev-parse --absolute-git-dir 2>$null)
@@ -7,15 +12,19 @@ function Get-EquatoriaRepository {
         throw "Equatoria Idle repository was not found at $repository."
     }
 
+    $expected = $script:EquatoriaRepositoryNames -join ', '
+
     $gitDirectory = $gitDirectory.Trim()
     $topLevel = (& git -C $repository rev-parse --show-toplevel 2>$null)
-    if ($LASTEXITCODE -ne 0 -or (Split-Path $topLevel.Trim() -Leaf) -ne 'Equatoria_Idle') {
-        throw "Refusing to operate outside the Equatoria_Idle repository."
+    $leaf = if ($LASTEXITCODE -eq 0) { Split-Path $topLevel.Trim() -Leaf } else { $null }
+    if (-not $leaf -or $script:EquatoriaRepositoryNames -notcontains $leaf) {
+        throw "Refusing to operate outside the Equatoria Idle repository (found '$leaf', expected one of: $expected)."
     }
 
+    $namePattern = ($script:EquatoriaRepositoryNames | ForEach-Object { [regex]::Escape($_) }) -join '|'
     $origin = (& git -C $repository remote get-url origin 2>$null)
-    if ($LASTEXITCODE -ne 0 -or $origin -notmatch '(?i)(^|[/\\:])Equatoria_Idle(?:\.git)?$') {
-        throw "Refusing to operate because origin is not the Equatoria_Idle repository."
+    if ($LASTEXITCODE -ne 0 -or $origin -notmatch "(?i)(^|[/\\:])($namePattern)(?:\.git)?$") {
+        throw "Refusing to operate because origin is not the Equatoria Idle repository (expected one of: $expected)."
     }
 
     [pscustomobject]@{

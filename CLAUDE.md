@@ -12,33 +12,33 @@ the working tree of every repo under `Documents\GitHub` — including half-finis
 and including files containing unresolved merge conflict markers. It has interrupted a
 merge in progress and committed broken source before.
 
-**Before starting any work that edits files, disable it:**
+**Before starting any work that edits files, pause it:**
 
 ```bash
-powershell -Command "Disable-ScheduledTask -TaskName 'GitHub-SyncRepos'"
+powershell -ExecutionPolicy Bypass -File .\scripts\pause-autosync.ps1
 ```
 
-**When your work is committed and pushed, re-enable it:**
+**When your work is committed and verified on `origin/main`, resume it:**
 
 ```bash
-powershell -Command "Enable-ScheduledTask -TaskName 'GitHub-SyncRepos'"
+powershell -ExecutionPolicy Bypass -File .\scripts\resume-autosync.ps1
 ```
 
-Keep it disabled for the whole task — investigation, edits, tests, conflict resolution,
-commit, and push. Re-enable only after you have verified your commit is on `origin/main`.
-If work is interrupted or you cannot push, leave it disabled and say so in your final
-report, so the user knows to re-enable it themselves.
+This writes `.git/AUTOSYNC_PAUSED`, which `sync-repos.ps1` checks before touching a repo.
+It also writes `.git/AGENT_WORK_ACTIVE`; check that marker first and stop if another active
+task already owns it.
+
+Keep it paused for the whole task — investigation, edits, tests, conflict resolution,
+commit, and push. Resume only after you have verified your commit is on `origin/main`. If
+work is interrupted or you cannot push, leave it paused and say so in your final report, so
+the user knows to resume it themselves.
 
 If a run does slip through, look for a commit titled `Auto-sync: local changes <date>` and
 check it for conflict markers (`git grep -n '^<<<<<<< '`) before building on it.
 
-### Do not use scripts/pause-autosync.ps1 here
+**Escape hatch.** If the pause scripts fail for any reason, fall back to disabling the
+scheduled task directly, and re-enable it when done:
 
-`AGENTS.md` documents a marker-file workflow using `scripts/pause-autosync.ps1` and
-`scripts/resume-autosync.ps1`. **Those scripts do not work in this checkout.** They call
-`Get-EquatoriaRepository` in `scripts/autosync-common.ps1`, which throws
-`Refusing to operate outside the Equatoria_Idle repository` unless both the repo directory
-and the `origin` URL are named `Equatoria_Idle`; this clone is `ParticleIdle`. The marker
-files they would create (`.git/AUTOSYNC_PAUSED`, `.git/AGENT_WORK_ACTIVE`) are also
-ignored by `sync-repos.ps1`, which has no pause check of any kind. Disabling the scheduled
-task is the only mechanism that actually stops the auto-commits.
+```bash
+powershell -Command "Disable-ScheduledTask -TaskName 'GitHub-SyncRepos'"
+```
